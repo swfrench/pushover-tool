@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Options represents required options used by the Message API Client.
@@ -33,27 +34,50 @@ type messageRequest struct {
 	Token   string `json:"token"`
 	User    string `json:"user"`
 	Message string `json:"message"`
-	Title   string `json:"title"`
+	// Optional fields:
+	Title    string `json:"title"`
+	Priority *int   `json:"priority"`
+	Retry    *int   `json:"retry"`
+	Expire   *int   `json:"expire"`
 }
 
 type messageResponse struct {
 	Status  int      `json:"status"`
 	Request string   `json:"request"`
+	Receipt string   `json:"receipt"`
 	Errors  []string `json:"errors"`
 	// Note: There may be additional (ignored) fields in the response.
 }
 
-const messageStatusOK = 1
+const (
+	messageStatusOK   = 1
+	emergencyPriority = 2
+)
 
 // Send uses the Message API to send the provided message to the associated user
 // token. If non-nil, the message will use the provided title.
-func (c *Client) Send(user, message string, title string) error {
-	bs, err := json.Marshal(&messageRequest{
+func (c *Client) Send(user, message string, title string, emergency bool, retry, expire time.Duration) error {
+	mreq := &messageRequest{
 		Token:   c.opts.Token,
 		User:    user,
 		Message: message,
 		Title:   title,
-	})
+	}
+	if emergency {
+		eopts := struct {
+			priority int
+			retry    int
+			expire   int
+		}{
+			priority: emergencyPriority,
+			retry:    int(retry.Seconds()),
+			expire:   int(expire.Seconds()),
+		}
+		mreq.Priority = &eopts.priority
+		mreq.Retry = &eopts.retry
+		mreq.Expire = &eopts.expire
+	}
+	bs, err := json.Marshal(mreq)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message API request body: %v", err)
 	}
@@ -74,6 +98,8 @@ func (c *Client) Send(user, message string, title string) error {
 	if mresp.Status != messageStatusOK {
 		return fmt.Errorf("message API returned non-OK status (%d) for request %q - errors: %s", mresp.Status, mresp.Request, strings.Join(mresp.Errors, ", "))
 	}
-	fmt.Println(mresp.Request)
+	if emergency {
+		fmt.Println(mresp.Receipt)
+	}
 	return nil
 }
