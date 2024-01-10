@@ -28,9 +28,9 @@ func (*Message) Usage() string {
 }
 
 func (m *Message) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&m.user, "user", "", "The user/group key to message.")
+	f.StringVar(&m.user, "user", "", "The user/group key to message (required).")
 	f.StringVar(&m.message, "message", "", "The message to send. If empty / unset, reads from stdin.")
-	f.StringVar(&m.title, "title", "", "The message title to send. If empty / unset, none is provided to the API.")
+	f.StringVar(&m.title, "title", "pushover-tool", "The message title to send.")
 }
 
 func (m *Message) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
@@ -45,11 +45,7 @@ func (m *Message) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 	if err != nil {
 		log.Fatalf("Message Client initialization failed: %v", err)
 	}
-	title := &m.title
-	if m.title == "" {
-		title = nil
-	}
-	if err := client.Send(m.user, m.message, title); err != nil {
+	if err := client.Send(m.user, m.message, m.title); err != nil {
 		log.Fatalf("Failed to send message: %v", err)
 	}
 	return subcommands.ExitSuccess

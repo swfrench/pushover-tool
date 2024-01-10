@@ -33,9 +33,7 @@ type messageRequest struct {
 	Token   string `json:"token"`
 	User    string `json:"user"`
 	Message string `json:"message"`
-	// Optional fields:
-	// TODO: Add more.
-	Title *string `json:"title"`
+	Title   string `json:"title"`
 }
 
 type messageResponse struct {
@@ -49,7 +47,7 @@ const messageStatusOK = 1
 
 // Send uses the Message API to send the provided message to the associated user
 // token. If non-nil, the message will use the provided title.
-func (c *Client) Send(user, message string, title *string) error {
+func (c *Client) Send(user, message string, title string) error {
 	bs, err := json.Marshal(&messageRequest{
 		Token:   c.opts.Token,
 		User:    user,
