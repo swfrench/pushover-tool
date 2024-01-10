@@ -30,14 +30,26 @@ func mustReadToken() string {
 	return tf.Token
 }
 
+type wrapper struct {
+	subcommands.Command
+}
+
+func (w *wrapper) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	return w.Command.Execute(ctx, f, mustReadToken())
+}
+
+func withToken(c subcommands.Command) *wrapper {
+	return &wrapper{c}
+}
+
 func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
-	subcommands.Register(new(commands.Message), "")
+	subcommands.Register(withToken(new(commands.Message)), "")
 
 	flag.Parse()
 
 	ctx := context.Background()
-	os.Exit(int(subcommands.Execute(ctx, mustReadToken())))
+	os.Exit(int(subcommands.Execute(ctx)))
 }
