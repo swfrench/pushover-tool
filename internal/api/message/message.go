@@ -54,8 +54,11 @@ const (
 	emergencyPriority = 2
 )
 
-// Send uses the Message API to send the provided message to the associated user
-// token. If non-nil, the message will use the provided title.
+// Send uses the Message API to send the provided message to the specified user,
+// using the token associated with this Client.
+// If emergency is true, the message will be sent with emergency priority (2),
+// with delivery of un-ACK'd messages retried with the specified retry period
+// until expiration.
 func (c *Client) Send(user, message string, title string, emergency bool, retry, expire time.Duration) error {
 	mreq := &messageRequest{
 		Token:   c.opts.Token,
