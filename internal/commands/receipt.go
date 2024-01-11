@@ -43,7 +43,7 @@ func (m *Receipt) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 	if err != nil {
 		log.Fatalf("Receipt Client initialization failed: %v", err)
 	}
-	if err := client.Wait(m.receipt); err != nil {
+	if err := client.Wait(ctx, m.receipt); err != nil {
 		log.Fatalf("Failed to verify message receipt: %v", err)
 	}
 	return subcommands.ExitSuccess

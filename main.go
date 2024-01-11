@@ -7,12 +7,16 @@ import (
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	"github.com/google/subcommands"
 	"github.com/swfrench/pushover-tool/internal/commands"
 )
 
-var tokenPath = flag.String("token_path", "", "Path to the Pushover API token file (i.e., app token). Note that environment expansion is applied to the path.")
+var (
+	tokenPath = flag.String("token_path", "", "Path to the Pushover API token file (i.e., app token). Note that environment expansion is applied to the path.")
+	timeout   = flag.Duration("timeout", time.Hour, "The timeout applied to the operation underlying the selected subcommand.")
+)
 
 type tokenFile struct {
 	Token string `json:"token"`
@@ -51,6 +55,7 @@ func main() {
 
 	flag.Parse()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
 	os.Exit(int(subcommands.Execute(ctx)))
 }

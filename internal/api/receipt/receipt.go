@@ -1,6 +1,7 @@
 package receipt
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,11 +53,15 @@ var errNotAcknowledged = errors.New("not acknowledged")
 
 // Wait uses the Receipt API to wait for acknowledgement of the provided
 // receipt.
-func (c *Client) Wait(receipt string) error {
+func (c *Client) Wait(ctx context.Context, receipt string) error {
 	u := fmt.Sprintf("https://api.pushover.net/1/receipts/%s.json?%s", receipt, url.Values{"token": {c.opts.Token}}.Encode())
 	check := func() error {
 		log.Printf("Polling for ACK (receipt: %s)", receipt)
-		resp, err := c.client.Get(u)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+		if err != nil {
+			return fmt.Errorf("failed to initialize receipt API request: %v", err)
+		}
+		resp, err := c.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed to send receipt API request: %v", err)
 		}
@@ -77,14 +82,23 @@ func (c *Client) Wait(receipt string) error {
 		}
 		return nil
 	}
+	if err := check(); err == nil {
+		return nil
+	} else if !errors.Is(err, errNotAcknowledged) {
+		return err
+	}
 	tc := time.NewTicker(c.opts.Interval)
 	defer tc.Stop()
 	for {
-		if err := check(); err == nil {
-			return nil
-		} else if !errors.Is(err, errNotAcknowledged) {
-			return err
+		select {
+		case <-tc.C:
+			if err := check(); err == nil {
+				return nil
+			} else if !errors.Is(err, errNotAcknowledged) {
+				return err
+			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
-		<-tc.C
 	}
 }

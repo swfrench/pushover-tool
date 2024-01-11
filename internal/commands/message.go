@@ -49,7 +49,7 @@ func (m *Message) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 	if err != nil {
 		log.Fatalf("Message Client initialization failed: %v", err)
 	}
-	if err := client.Send(m.user, m.message, m.title, m.emergency, m.retry, m.expire); err != nil {
+	if err := client.Send(ctx, m.user, m.message, m.title, m.emergency, m.retry, m.expire); err != nil {
 		log.Fatalf("Failed to send message: %v", err)
 	}
 	return subcommands.ExitSuccess

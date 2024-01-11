@@ -2,6 +2,7 @@ package message
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -53,7 +54,7 @@ func stringSeconds(d time.Duration) string {
 // If emergency is true, the message will be sent with emergency priority (2),
 // with delivery of un-ACK'd messages retried with the specified retry period
 // until expiration.
-func (c *Client) Send(user, message, title string, emergency bool, retry, expire time.Duration) error {
+func (c *Client) Send(ctx context.Context, user, message, title string, emergency bool, retry, expire time.Duration) error {
 	mreq := url.Values{}
 	mreq.Set("token", c.opts.Token)
 	mreq.Set("user", user)
@@ -64,7 +65,12 @@ func (c *Client) Send(user, message, title string, emergency bool, retry, expire
 		mreq.Set("retry", stringSeconds(retry))
 		mreq.Set("expire", stringSeconds(expire))
 	}
-	resp, err := c.client.Post("https://api.pushover.net/1/messages.json", "application/x-www-form-urlencoded", bytes.NewBufferString(mreq.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.pushover.net/1/messages.json", bytes.NewBufferString(mreq.Encode()))
+	if err != nil {
+		return fmt.Errorf("failed to initialize message API request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send message API request: %v", err)
 	}
