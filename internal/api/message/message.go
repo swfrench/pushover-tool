@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -29,19 +31,7 @@ func NewClient(opts *Options) (*Client, error) {
 	return &Client{opts: opts}, nil
 }
 
-type messageRequest struct {
-	// Required fields:
-	Token   string `json:"token"`
-	User    string `json:"user"`
-	Message string `json:"message"`
-	// Optional fields:
-	Title    string `json:"title"`
-	Priority *int   `json:"priority"`
-	Retry    *int   `json:"retry"`
-	Expire   *int   `json:"expire"`
-}
-
-type messageResponse struct {
+type response struct {
 	Status  int      `json:"status"`
 	Request string   `json:"request"`
 	Receipt string   `json:"receipt"`
@@ -51,41 +41,30 @@ type messageResponse struct {
 
 const (
 	messageStatusOK   = 1
-	emergencyPriority = 2
+	emergencyPriority = "2"
 )
+
+func stringSeconds(d time.Duration) string {
+	return strconv.Itoa(int(d.Seconds()))
+}
 
 // Send uses the Message API to send the provided message to the specified user,
 // using the token associated with this Client.
 // If emergency is true, the message will be sent with emergency priority (2),
 // with delivery of un-ACK'd messages retried with the specified retry period
 // until expiration.
-func (c *Client) Send(user, message string, title string, emergency bool, retry, expire time.Duration) error {
-	mreq := &messageRequest{
-		Token:   c.opts.Token,
-		User:    user,
-		Message: message,
-		Title:   title,
-	}
+func (c *Client) Send(user, message, title string, emergency bool, retry, expire time.Duration) error {
+	mreq := url.Values{}
+	mreq.Set("token", c.opts.Token)
+	mreq.Set("user", user)
+	mreq.Set("message", message)
+	mreq.Set("title", title)
 	if emergency {
-		eopts := struct {
-			priority int
-			retry    int
-			expire   int
-		}{
-			priority: emergencyPriority,
-			retry:    int(retry.Seconds()),
-			expire:   int(expire.Seconds()),
-		}
-		mreq.Priority = &eopts.priority
-		mreq.Retry = &eopts.retry
-		mreq.Expire = &eopts.expire
+		mreq.Set("priority", emergencyPriority)
+		mreq.Set("retry", stringSeconds(retry))
+		mreq.Set("expire", stringSeconds(expire))
 	}
-	bs, err := json.Marshal(mreq)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message API request body: %v", err)
-	}
-	buff := bytes.NewBuffer(bs)
-	resp, err := c.client.Post("https://api.pushover.net/1/messages.json", "application/json", buff)
+	resp, err := c.client.Post("https://api.pushover.net/1/messages.json", "application/x-www-form-urlencoded", bytes.NewBufferString(mreq.Encode()))
 	if err != nil {
 		return fmt.Errorf("failed to send message API request: %v", err)
 	}
@@ -94,9 +73,9 @@ func (c *Client) Send(user, message string, title string, emergency bool, retry,
 	if err != nil {
 		return fmt.Errorf("failed to read message API response body: %v", err)
 	}
-	mresp := new(messageResponse)
-	if err := json.Unmarshal(body, mresp); err != nil {
-		return fmt.Errorf("failed to unmarshal message API response bidy: %v", err)
+	var mresp response
+	if err := json.Unmarshal(body, &mresp); err != nil {
+		return fmt.Errorf("failed to unmarshal message API response body: %v", err)
 	}
 	if mresp.Status != messageStatusOK {
 		return fmt.Errorf("message API returned non-OK status (%d) for request %q - errors: %s", mresp.Status, mresp.Request, strings.Join(mresp.Errors, ", "))
