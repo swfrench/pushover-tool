@@ -7,6 +7,7 @@ A simple tool for interacting with the [Pushover API](https://pushover.net/api).
 At the moment, only the following are supported:
 
 * Message API: See the `message` subcommand.
+* Receipt API: See the `receipt` subcommand.
 
 ## Token
 
