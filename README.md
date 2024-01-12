@@ -30,3 +30,32 @@ containing a single object with a `"token"` field, e.g.
 ```
 
 The path to the token file is specified with the `token_path` flag.
+
+## Examples
+
+Send a normal-priority message to `$USER`:
+
+```shell
+pushover-tool -token_path ~/.config/pushover/token.json message \
+    -message "This is fine" -user $USER
+```
+
+Send an emergency-priority message to `$USER` and print the message receipt ID
+to stdout:
+
+```shell
+pushover-tool -token_path ~/.config/pushover/token.json message \
+    -message "My pants are on fire" -user $USER -emergency
+```
+
+Wait for the message associated with `$RECEIPT` to be acknowledged, for up to
+2m (polling every 10s):
+
+```shell
+pushover-tool -token_path ~/.config/pushover/token.json -timeout 2m receipt \
+    -receipt $RECEIPT -interval 10s
+```
+
+Note that if the `-message` or `-receipt` flags are elided from these commands,
+their values will instead be read from stdin (e.g., you can pipe an emergency
+`message` to `receipt` in order to await acknowledgement).
