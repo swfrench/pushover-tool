@@ -13,6 +13,7 @@ At the moment, only the following are supported:
 
 * Message API: See the `message` subcommand.
 * Receipt API: See the `receipt` subcommand.
+* Validate API: See the `validate` subcommand.
 
 These alone have been sufficient to meet the vast majority of my intended use
 cases (e.g., completion / failure notification for long-running or unattended
@@ -32,6 +33,14 @@ containing a single object with a `"token"` field, e.g.
 The path to the token file is specified with the `token_path` flag.
 
 ## Examples
+
+Verify that the user / group key `$USER` is valid, emitting one of either "OK"
+or "INVALID" to stdout:
+
+```shell
+pushover-tool -token_path ~/.config/pushover/token.json validate \
+    -user $USER
+```
 
 Send a normal-priority message to `$USER`:
 

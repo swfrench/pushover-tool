@@ -52,6 +52,7 @@ func main() {
 	subcommands.Register(subcommands.CommandsCommand(), "")
 	subcommands.Register(withToken(new(commands.Message)), "")
 	subcommands.Register(withToken(new(commands.Receipt)), "")
+	subcommands.Register(withToken(new(commands.Validate)), "")
 
 	flag.Parse()
 
